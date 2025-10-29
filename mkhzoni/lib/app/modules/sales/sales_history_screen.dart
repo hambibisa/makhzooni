@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // سنحتاج لإضافة هذه الحزمة لتنسيق التاريخ
+import 'package:intl/intl.dart';
 import '../../data/models/sale_model.dart';
+import 'sale_details_screen.dart'; // 1. استيراد شاشة تفاصيل الفاتورة
 
 class SalesHistoryScreen extends StatelessWidget {
   const SalesHistoryScreen({super.key});
@@ -14,7 +15,6 @@ class SalesHistoryScreen extends StatelessWidget {
         backgroundColor: Colors.green,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // الاستماع إلى مجموعة 'sales' وترتيبها حسب التاريخ (الأحدث أولاً)
         stream: FirebaseFirestore.instance
             .collection('sales')
             .orderBy('createdAt', descending: true)
@@ -45,7 +45,6 @@ class SalesHistoryScreen extends StatelessWidget {
                 salesDocs[index].id,
               );
 
-              // أيقونة بناءً على نوع البيع
               final IconData iconData = sale.saleType == SaleType.cash
                   ? Icons.money_rounded
                   : Icons.person_rounded;
@@ -53,7 +52,6 @@ class SalesHistoryScreen extends StatelessWidget {
                   ? Colors.blue
                   : Colors.orange;
               
-              // تنسيق التاريخ والوقت
               final String formattedDate = DateFormat('yyyy/MM/dd – hh:mm a').format(sale.createdAt);
 
               return Card(
@@ -64,11 +62,10 @@ class SalesHistoryScreen extends StatelessWidget {
                     child: Icon(iconData, color: iconColor),
                   ),
                   title: Text(
-                    'فاتورة #${sale.id!.substring(0, 6)}', // عرض جزء من معرّف الفاتورة
+                    'فاتورة #${sale.id!.substring(0, 6)}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    // عرض اسم العميل في حالة الدين، أو "بيع نقدي"
                     sale.saleType == SaleType.credit
                         ? 'عميل: ${sale.clientName ?? 'غير محدد'}\n$formattedDate'
                         : 'بيع نقدي\n$formattedDate',
@@ -82,8 +79,13 @@ class SalesHistoryScreen extends StatelessWidget {
                     ),
                   ),
                   isThreeLine: true,
+                  // 2. تعديل دالة onTap لفتح شاشة التفاصيل
                   onTap: () {
-                    // لاحقاً: فتح شاشة تفاصيل الفاتورة
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (ctx) => SaleDetailsScreen(sale: sale),
+                      ),
+                    );
                   },
                 ),
               );
