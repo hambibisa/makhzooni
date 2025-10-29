@@ -10,41 +10,28 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  // هذه المتغيرات ستحمل قيم التقارير التي سنحسبها
   double _todaySales = 0.0;
   double _monthlySales = 0.0;
-  bool _isLoading = true; // لعرض مؤشر التحميل في البداية
+  double _totalDebts = 0.0; // 1. متغير جديد لتخزين إجمالي الديون
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // عند فتح الشاشة، قم بحساب التقارير
     _calculateReports();
   }
 
-  // --- دالة حساب التقارير ---
   Future<void> _calculateReports() async {
     setState(() => _isLoading = true);
 
     final now = DateTime.now();
-    // تحديد بداية اليوم (الساعة 12 صباحاً)
     final startOfToday = DateTime(now.year, now.month, now.day);
-    // تحديد بداية الشهر
     final startOfMonth = DateTime(now.year, now.month, 1);
 
-    // 1. جلب فواتير اليوم
-    final todaySnapshot = await FirebaseFirestore.instance
-        .collection('sales')
-        .where('createdAt', isGreaterThanOrEqualTo: startOfToday)
-        .get();
+    // حساب المبيعات (كما كان)
+    final todaySnapshot = await FirebaseFirestore.instance.collection('sales').where('createdAt', isGreaterThanOrEqualTo: startOfToday).get();
+    final monthSnapshot = await FirebaseFirestore.instance.collection('sales').where('createdAt', isGreaterThanOrEqualTo: startOfMonth).get();
 
-    // 2. جلب فواتير الشهر
-    final monthSnapshot = await FirebaseFirestore.instance
-        .collection('sales')
-        .where('createdAt', isGreaterThanOrEqualTo: startOfMonth)
-        .get();
-
-    // 3. حساب الإجماليات
     double todayTotal = 0.0;
     for (var doc in todaySnapshot.docs) {
       todayTotal += (doc.data()['totalAmount'] as num).toDouble();
@@ -55,11 +42,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
       monthTotal += (doc.data()['totalAmount'] as num).toDouble();
     }
 
-    // 4. تحديث الواجهة بالنتائج
+    // 2. جلب بيانات العملاء لحساب الديون
+    final clientsSnapshot = await FirebaseFirestore.instance.collection('clients').get();
+    
+    double totalDebtAmount = 0.0;
+    for (var doc in clientsSnapshot.docs) {
+      // التأكد من وجود حقل 'totalDebt' قبل إضافته
+      if (doc.data().containsKey('totalDebt')) {
+        totalDebtAmount += (doc.data()['totalDebt'] as num).toDouble();
+      }
+    }
+
+    // تحديث الواجهة بالنتائج
     if (mounted) {
       setState(() {
         _todaySales = todayTotal;
         _monthlySales = monthTotal;
+        _totalDebts = totalDebtAmount; // 3. تحديث قيمة الديون
         _isLoading = false;
       });
     }
@@ -72,7 +71,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
         title: const Text("التقارير والسجلات"),
         backgroundColor: Colors.green,
         actions: [
-          // زر لتحديث التقارير يدوياً
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _calculateReports,
@@ -83,7 +81,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // --- قسم الملخص المالي ---
           const Text('ملخص مالي', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           _isLoading
@@ -103,14 +100,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       icon: Icons.calendar_month,
                       color: Colors.orange,
                     ),
+                    const SizedBox(height: 10),
+                    // 4. إضافة البطاقة الجديدة لعرض إجمالي الديون
+                    _buildReportCard(
+                      title: 'إجمالي الديون على العملاء',
+                      value: '${_totalDebts.toStringAsFixed(0)} ر.ي',
+                      icon: Icons.people_outline,
+                      color: Colors.red,
+                    ),
                   ],
                 ),
           
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-
-          // --- قسم السجلات (كما كان) ---
           const Text('السجلات', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Card(
@@ -140,7 +143,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // دالة مساعدة لبناء بطاقات التقارير
   Widget _buildReportCard({
     required String title,
     required String value,
