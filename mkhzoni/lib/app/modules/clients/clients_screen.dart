@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/client_model.dart';
 import 'add_client_screen.dart';
+import 'client_details_screen.dart'; // 1. استيراد شاشة التفاصيل
 
-// 1. تحويل الشاشة إلى StatefulWidget
 class ClientsScreen extends StatefulWidget {
   const ClientsScreen({super.key});
 
@@ -12,7 +12,6 @@ class ClientsScreen extends StatefulWidget {
 }
 
 class _ClientsScreenState extends State<ClientsScreen> {
-  // 2. متغير لتخزين نص البحث
   String _searchQuery = '';
 
   @override
@@ -24,7 +23,6 @@ class _ClientsScreenState extends State<ClientsScreen> {
       ),
       body: Column(
         children: [
-          // 3. إضافة حقل البحث
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -42,7 +40,6 @@ class _ClientsScreenState extends State<ClientsScreen> {
               ),
             ),
           ),
-          // 4. استخدام StreamBuilder لعرض البيانات المفلترة
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('clients').orderBy('name').snapshots(),
@@ -54,13 +51,12 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   return const Center(child: Text('لا يوجد عملاء مضافون'));
                 }
 
-                // --- منطق الفلترة ---
                 final allClients = snapshot.data!.docs;
                 final filteredClients = _searchQuery.isEmpty
-                    ? allClients // إذا كان البحث فارغاً، اعرض كل العملاء
+                    ? allClients
                     : allClients.where((doc) {
                         final clientName = (doc.data() as Map<String, dynamic>)['name']?.toString().toLowerCase() ?? '';
-                        return clientName.contains(_searchQuery); // اعرض فقط ما يطابق البحث
+                        return clientName.contains(_searchQuery);
                       }).toList();
                 
                 if (filteredClients.isEmpty) {
@@ -83,10 +79,18 @@ class _ClientsScreenState extends State<ClientsScreen> {
                         subtitle: Text(client.phone),
                         trailing: Text(
                           'الدين: ${client.totalDebt.toStringAsFixed(0)} ر.ي',
-                          style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: client.totalDebt > 0 ? Colors.red : Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
+                        // 2. تعديل onTap لفتح شاشة التفاصيل
                         onTap: () {
-                          // لاحقاً: يمكن فتح شاشة تفاصيل العميل هنا
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (ctx) => ClientDetailsScreen(client: client),
+                            ),
+                          );
                         },
                       ),
                     );
