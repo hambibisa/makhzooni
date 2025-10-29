@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../data/models/client_model.dart'; // استيراد نموذج العميل
 
 class AddClientScreen extends StatefulWidget {
   const AddClientScreen({super.key});
@@ -24,17 +26,51 @@ class _AddClientScreenState extends State<AddClientScreen> {
   }
 
   Future<void> _saveClient() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    // التحقق من أن حقل الاسم ليس فارغاً
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      // --- سيتم إضافة كود الحفظ في Firebase هنا لاحقاً ---
-      await Future.delayed(const Duration(seconds: 1)); // محاكاة للشبكة
-      
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. إنشاء كائن (Object) من نموذج العميل
+      final newClient = Client(
+        name: _nameController.text,
+        phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
+        address: _addressController.text.isNotEmpty ? _addressController.text : null,
+        // الدين المبدئي هو صفر
+      );
+
+      // 2. الوصول إلى مجموعة 'clients' في Firestore وإضافة العميل الجديد
+      await FirebaseFirestore.instance
+          .collection('clients')
+          .add(newClient.toMap());
+
+      // 3. عرض رسالة نجاح والعودة للشاشة السابقة
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم حفظ العميل بنجاح (مؤقتاً)')),
+          const SnackBar(
+            content: Text('تم حفظ العميل بنجاح!'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.of(context).pop();
+      }
+    } catch (error) {
+      // في حال حدوث خطأ
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء حفظ العميل: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      // إيقاف دائرة التحميل في كل الحالات
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
