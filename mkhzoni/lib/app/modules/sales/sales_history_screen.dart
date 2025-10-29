@@ -1,0 +1,96 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // سنحتاج لإضافة هذه الحزمة لتنسيق التاريخ
+import '../../data/models/sale_model.dart';
+
+class SalesHistoryScreen extends StatelessWidget {
+  const SalesHistoryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('سجل المبيعات'),
+        backgroundColor: Colors.green,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        // الاستماع إلى مجموعة 'sales' وترتيبها حسب التاريخ (الأحدث أولاً)
+        stream: FirebaseFirestore.instance
+            .collection('sales')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return const Center(child: Text('حدث خطأ في تحميل السجل'));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text(
+                'لا يوجد فواتير مسجلة بعد.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            );
+          }
+
+          final salesDocs = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: salesDocs.length,
+            itemBuilder: (ctx, index) {
+              final sale = Sale.fromMap(
+                salesDocs[index].data() as Map<String, dynamic>,
+                salesDocs[index].id,
+              );
+
+              // أيقونة بناءً على نوع البيع
+              final IconData iconData = sale.saleType == SaleType.cash
+                  ? Icons.money_rounded
+                  : Icons.person_rounded;
+              final Color iconColor = sale.saleType == SaleType.cash
+                  ? Colors.blue
+                  : Colors.orange;
+              
+              // تنسيق التاريخ والوقت
+              final String formattedDate = DateFormat('yyyy/MM/dd – hh:mm a').format(sale.createdAt);
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: iconColor.withOpacity(0.1),
+                    child: Icon(iconData, color: iconColor),
+                  ),
+                  title: Text(
+                    'فاتورة #${sale.id!.substring(0, 6)}', // عرض جزء من معرّف الفاتورة
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    // عرض اسم العميل في حالة الدين، أو "بيع نقدي"
+                    sale.saleType == SaleType.credit
+                        ? 'عميل: ${sale.clientName ?? 'غير محدد'}\n$formattedDate'
+                        : 'بيع نقدي\n$formattedDate',
+                  ),
+                  trailing: Text(
+                    '${sale.totalAmount.toStringAsFixed(0)} ر.ي',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.green,
+                    ),
+                  ),
+                  isThreeLine: true,
+                  onTap: () {
+                    // لاحقاً: فتح شاشة تفاصيل الفاتورة
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
