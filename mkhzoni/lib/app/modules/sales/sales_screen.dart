@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // استيراد Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/sale_item_model.dart';
+import 'checkout_screen.dart'; // 1. استيراد شاشة إتمام البيع
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -11,13 +12,9 @@ class SalesScreen extends StatefulWidget {
 }
 
 class _SalesScreenState extends State<SalesScreen> {
-  // سلة المشتريات (تبقى كما هي)
   final List<SaleItem> _cart = [];
-  
-  // --- تم حذف قائمة المنتجات المؤقتة ---
 
   void _addToCart(Product product) {
-    // التأكد من أن الكمية المتاحة أكبر من صفر
     if (product.quantity <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -52,10 +49,26 @@ class _SalesScreenState extends State<SalesScreen> {
     return _cart.fold(0.0, (sum, item) => sum + item.totalPrice);
   }
   
-  // دالة لمسح السلة
   void _clearCart() {
     setState(() {
       _cart.clear();
+    });
+  }
+
+  // 2. دالة لفتح شاشة إتمام البيع
+  void _navigateToCheckout() {
+    if (_cart.isEmpty) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (ctx) => CheckoutScreen(
+          cart: _cart,
+          totalAmount: _cartTotal,
+        ),
+      ),
+    ).then((_) {
+      // بعد العودة من شاشة الدفع، قم بمسح السلة
+      _clearCart();
     });
   }
 
@@ -66,7 +79,6 @@ class _SalesScreenState extends State<SalesScreen> {
         title: const Text("نقطة البيع"),
         backgroundColor: Colors.green,
         actions: [
-          // زر لمسح السلة
           IconButton(
             icon: const Icon(Icons.delete_sweep),
             onPressed: _cart.isEmpty ? null : _clearCart,
@@ -76,20 +88,19 @@ class _SalesScreenState extends State<SalesScreen> {
       ),
       body: Row(
         children: [
-          // --- الجزء الأيسر: قائمة المنتجات من Firebase ---
+          // الجزء الأيسر: قائمة المنتجات
           Expanded(
             flex: 2,
             child: Container(
               color: Colors.grey[100],
               child: StreamBuilder<QuerySnapshot>(
-                // الاستماع إلى مجموعة 'products'
                 stream: FirebaseFirestore.instance.collection('products').orderBy('name').snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('لا توجد منتجات في المخزون'));
+                    return const Center(child: Text('لا توجد منتجات'));
                   }
 
                   final productsDocs = snapshot.data!.docs;
@@ -102,7 +113,6 @@ class _SalesScreenState extends State<SalesScreen> {
                         productsDocs[index].id,
                       );
                       
-                      // جعل العنصر غير قابل للاستخدام إذا كانت الكمية صفر
                       final bool isOutOfStock = product.quantity <= 0;
 
                       return Card(
@@ -124,7 +134,7 @@ class _SalesScreenState extends State<SalesScreen> {
             ),
           ),
 
-          // --- الجزء الأيمن: سلة المشتريات (تبقى كما هي) ---
+          // الجزء الأيمن: سلة المشتريات
           Expanded(
             flex: 3,
             child: Column(
@@ -171,9 +181,8 @@ class _SalesScreenState extends State<SalesScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _cart.isEmpty ? null : () {
-                            // لاحقاً: فتح شاشة إتمام البيع
-                          },
+                          // 3. استدعاء الدالة الجديدة هنا
+                          onPressed: _cart.isEmpty ? null : _navigateToCheckout,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             padding: const EdgeInsets.symmetric(vertical: 15),
