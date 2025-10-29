@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart'; // لاستقبال أخطاء الماسح
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart'; // 1. استيراد الحزمة
-import '../../data/models/product_model.dart';
+import 'package:mkhzoni/app/data/models/product_model.dart';
+import 'package:mobile_scanner/mobile_scanner.dart'; // <-- الحزمة الجديدة
+import 'package:permission_handler/permission_handler.dart'; // <-- حزمة الأذونات
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({super.key});
+  final Product? product;
+  const AddProductScreen({super.key, this.product});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -13,57 +14,101 @@ class AddProductScreen extends StatefulWidget {
 
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _quantityController = TextEditingController();
-  final _barcodeController = TextEditingController(); // 2. متحكم لحقل الباركود
-
+  late TextEditingController _nameController;
+  late TextEditingController _barcodeController;
+  late TextEditingController _priceController;
+  late TextEditingController _quantityController;
   bool _isLoading = false;
 
-  // 3. دالة مسح الباركود
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.product?.name ?? '');
+    _barcodeController = TextEditingController(text: widget.product?.barcode ?? '');
+    _priceController = TextEditingController(text: widget.product?.price.toString() ?? '');
+    _quantityController = TextEditingController(text: widget.product?.quantity.toString() ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _barcodeController.dispose();
+    _priceController.dispose();
+    _quantityController.dispose();
+    super.dispose();
+  }
+
   Future<void> _scanBarcode() async {
-    String barcodeScanRes;
-    try {
-      barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-        '#ff6666', // لون الشريط
-        'إلغاء',    // نص زر الإلغاء
-        true,       // تفعيل الفلاش
-        ScanMode.BARCODE, // تحديد نوع المسح (باركود)
+    // طلب إذن الكاميرا
+    var status = await Permission.camera.request();
+    if (status.isGranted) {
+      // إظهار شاشة الماسح الضوئي في نافذة منبثقة
+      final String? barcode = await showModalBottomSheet<String>(
+        context: context,
+        builder: (context) {
+          return SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: MobileScanner(
+              onDetect: (capture) {
+                final List<Barcode> barcodes = capture.barcodes;
+                if (barcodes.isNotEmpty) {
+                  final String? code = barcodes.first.rawValue;
+                  if (code != null && Navigator.canPop(context)) {
+                    Navigator.of(context).pop(code);
+                  }
+                }
+              },
+            ),
+          );
+        },
       );
-    } on PlatformException {
-      barcodeScanRes = 'فشل في الحصول على إصدار المنصة.';
-    }
 
-    if (!mounted) return;
-
-    // إذا لم يقم المستخدم بالإلغاء (الماسح يعيد '-1' عند الإلغاء)
-    if (barcodeScanRes != '-1') {
-      setState(() {
-        _barcodeController.text = barcodeScanRes; // 4. وضع الرقم في حقل الباركود
-      });
+      if (barcode != null) {
+        setState(() {
+          _barcodeController.text = barcode;
+        });
+      }
+    } else {
+       if(mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('يجب السماح بالوصول إلى الكاميرا لمسح الباركود')),
+        );
+       }
     }
   }
 
   Future<void> _saveProduct() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      final newProduct = Product(
+
+      final product = Product(
+        id: widget.product?.id, // Keep old id if editing
         name: _nameController.text,
-        price: double.parse(_priceController.text),
-        quantity: int.parse(_quantityController.text),
-        barcode: _barcodeController.text, // حفظ الباركود
+        barcode: _barcodeController.text,
+        price: double.tryParse(_priceController.text) ?? 0.0,
+        quantity: int.tryParse(_quantityController.text) ?? 0,
       );
 
       try {
-        await FirebaseFirestore.instance.collection('products').add(newProduct.toMap());
+        final collection = FirebaseFirestore.instance.collection('products');
+        if (product.id == null) {
+          await collection.add(product.toJson());
+        } else {
+          await collection.doc(product.id).update(product.toJson());
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تمت إضافة المنتج بنجاح!')),
+            const SnackBar(content: Text('تم حفظ المنتج بنجاح!')),
           );
           Navigator.of(context).pop();
         }
-      } catch (error) {
-        // ... (معالجة الخطأ)
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('حدث خطأ: $e')),
+          );
+        }
       } finally {
         if (mounted) {
           setState(() => _isLoading = false);
@@ -71,75 +116,58 @@ class _AddProductScreenState extends State<AddProductScreen> {
       }
     }
   }
-  
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _priceController.dispose();
-    _quantityController.dispose();
-    _barcodeController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إضافة منتج جديد'),
+        title: Text(widget.product == null ? 'إضافة منتج جديد' : 'تعديل المنتج'),
         backgroundColor: Colors.green,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Form(
               key: _formKey,
-              child: SingleChildScrollView(
+              child: ListView(
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // --- حقل الباركود وزر المسح ---
-                    TextFormField(
-                      controller: _barcodeController,
-                      decoration: InputDecoration(
-                        labelText: 'رقم الباركود (اختياري)',
-                        // 5. إضافة زر المسح داخل الحقل
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.camera_alt),
-                          onPressed: _scanBarcode,
-                          tooltip: 'مسح باركود',
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'اسم المنتج'),
-                      validator: (value) => value!.isEmpty ? 'الرجاء إدخال اسم المنتج' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _priceController,
-                      decoration: const InputDecoration(labelText: 'سعر البيع'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) => value!.isEmpty ? 'الرجاء إدخال السعر' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _quantityController,
-                      decoration: const InputDecoration(labelText: 'الكمية المتاحة'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) => value!.isEmpty ? 'الرجاء إدخال الكمية' : null,
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _saveProduct,
-                        child: const Text('حفظ المنتج'),
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'اسم المنتج'),
+                    validator: (value) => value!.isEmpty ? 'الرجاء إدخال اسم المنتج' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _barcodeController,
+                    decoration: InputDecoration(
+                      labelText: 'الباركود (رمز المنتج)',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.qr_code_scanner),
+                        onPressed: _scanBarcode,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _priceController,
+                    decoration: const InputDecoration(labelText: 'سعر البيع'),
+                    keyboardType: TextInputType.number,
+                    validator: (value) => value!.isEmpty ? 'الرجاء إدخال السعر' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _quantityController,
+                    decoration: const InputDecoration(labelText: 'الكمية المتوفرة'),
+                    keyboardType: TextInputType.number,
+                    validator: (value) => value!.isEmpty ? 'الرجاء إدخال الكمية' : null,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: _saveProduct,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    child: const Text('حفظ'),
+                  ),
+                ],
               ),
             ),
     );
