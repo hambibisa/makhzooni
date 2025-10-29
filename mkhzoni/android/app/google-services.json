@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "467394410651",
+    "project_id": "makhzooni",
+    "storage_bucket": "makhzooni.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:467394410651:android:1cf84f761c10eafdf7ee3e",
+        "android_client_info": {
+          "package_name": "com.example.makhzooni"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlpw6JYB2TWu48eBG97dlVh-_E5PfKhYc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:467394410651:android:43f723d4f39e35c4f7ee3e",
+        "android_client_info": {
+          "package_name": "com.example.mkhzoni"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlpw6JYB2TWu48eBG97dlVh-_E5PfKhYc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -6,10 +6,21 @@ import 'app/modules/sales/sales_screen.dart';
 import 'app/modules/clients/clients_screen.dart';
 import 'app/modules/reports/reports_screen.dart';
 import 'app/modules/settings/settings_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
-  runApp(const MakhzoniApp());
-  }
+
+// هذا هو الكود الجديد
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+    
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+            );
+
+              runApp(const MakhzoniApp());
+              }
+              
 
   class MakhzoniApp extends StatelessWidget {
     const MakhzoniApp({super.key});
@@ -21,7 +32,7 @@ void main() {
                         debugShowCheckedModeBanner: false,
                               theme: ThemeData(
                                       primarySwatch: Colors.green,
-                                              // fontFamily: 'Cairo', // يمكنك تفعيل لو أضفت الخط في assets لاحقًا
+                                               fontFamily: 'Cairo', // يمكنك تفعيل لو أضفت الخط في assets لاحقًا
                                                       scaffoldBackgroundColor: Colors.white,
                                                             ),
                                                                   home: const MainScreen(),
