@@ -43,7 +43,7 @@ jobs:
 
       # 7. رفع ملف الـ APK الناتج كـ "Artifact"
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: makhzoni-app-release.apk
           path: mkhzoni/build/app/outputs/flutter-apk/app-release.apk
