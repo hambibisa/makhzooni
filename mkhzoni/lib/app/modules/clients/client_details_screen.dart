@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/client_model.dart';
+import 'edit_client_screen.dart'; // <-- استيراد شاشة التعديل
 
 class ClientDetailsScreen extends StatelessWidget {
   final Client client;
 
   const ClientDetailsScreen({super.key, required this.client});
 
-  // --- هنا سنضيف دالة تسجيل الدفعة لاحقاً ---
   void _showAddPaymentDialog(BuildContext context) {
     final TextEditingController amountController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -34,7 +34,9 @@ class ClientDetailsScreen extends StatelessWidget {
                 if (amount == null || amount <= 0) {
                   return 'الرجاء إدخال مبلغ صحيح';
                 }
-                if (amount > client.totalDebt) {
+                // نستخدم البيانات الحية للدين للتحقق
+                final currentDebt = (context.read<DocumentSnapshot>().data() as Map<String, dynamic>)['totalDebt'] ?? 0.0;
+                if (amount > currentDebt) {
                   return 'المبلغ أكبر من الدين الحالي!';
                 }
                 return null;
@@ -51,14 +53,13 @@ class ClientDetailsScreen extends StatelessWidget {
                 if (formKey.currentState!.validate()) {
                   final amountPaid = double.parse(amountController.text);
                   
-                  // --- منطق تحديث الدين ---
                   try {
                     final clientRef = FirebaseFirestore.instance.collection('clients').doc(client.id);
                     await clientRef.update({
                       'totalDebt': FieldValue.increment(-amountPaid)
                     });
 
-                    Navigator.of(ctx).pop(); // إغلاق الحوار
+                    Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('تم تسجيل الدفعة بنجاح!'),
@@ -86,7 +87,6 @@ class ClientDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // استخدام StreamBuilder للاستماع للتحديثات الفورية على دين العميل
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance.collection('clients').doc(client.id).snapshots(),
       builder: (context, snapshot) {
@@ -94,20 +94,33 @@ class ClientDetailsScreen extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        // تحديث بيانات العميل بالبيانات الحية من الـ stream
         final liveClient = Client.fromMap(snapshot.data!.data() as Map<String, dynamic>, snapshot.data!.id);
 
         return Scaffold(
           appBar: AppBar(
             title: Text(liveClient.name),
             backgroundColor: Colors.green,
+            // --- زر التعديل ---
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      // تمرير العميل الحي لضمان أن شاشة التعديل لديها أحدث البيانات
+                      builder: (ctx) => EditClientScreen(client: liveClient),
+                    ),
+                  );
+                },
+                tooltip: 'تعديل البيانات',
+              ),
+            ],
           ),
           body: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- بطاقة معلومات العميل ---
                 Card(
                   elevation: 4,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -123,8 +136,6 @@ class ClientDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // --- بطاقة الدين ---
                 Card(
                   elevation: 4,
                   color: Colors.red[50],
@@ -151,14 +162,13 @@ class ClientDetailsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Spacer(), // لدفع الزر إلى الأسفل
-
-                // --- زر تسجيل دفعة ---
+                const Spacer(),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.payment),
                     label: const Text('تسجيل دفعة جديدة'),
+                    // تم تعديل الدالة لتمرير الـ context الصحيح
                     onPressed: () => _showAddPaymentDialog(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
