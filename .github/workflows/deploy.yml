@@ -1,0 +1,39 @@
+name: Deploy Flutter Web to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Create Firebase Options file
+        env:
+          FIREBASE_OPTIONS_CONTENT: ${{ secrets.FIREBASE_OPTIONS }}
+        run: echo "$FIREBASE_OPTIONS_CONTENT" > lib/firebase_options.dart
+
+      - name: Install dependencies
+        # نحدد مجلد العمل الصحيح هنا
+        run: cd mkhzoni && flutter pub get
+
+      - name: Build Flutter Web
+        # نحدد مجلد العمل ونعدل مسار البناء
+        run: cd mkhzoni && flutter build web --release --base-href /mkhzoni/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # نحدد المجلد الصحيح الذي تم البناء فيه
+          publish_dir: ./mkhzoni/build/web
