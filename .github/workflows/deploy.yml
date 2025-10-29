@@ -1,5 +1,6 @@
 name: Deploy Flutter Web to GitHub Pages
 
+# يعمل هذا الـ Workflow عند كل عملية push إلى الفرع الرئيسي
 on:
   push:
     branches:
@@ -7,33 +8,44 @@ on:
 
 jobs:
   build_and_deploy:
+    # يعمل على آخر نسخة من نظام أوبونتو
     runs-on: ubuntu-latest
 
     steps:
+      # 1. جلب الكود من المستودع إلى بيئة العمل
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2. تثبيت Flutter SDK
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: 'stable' # استخدم النسخة المستقرة من فلاتر
 
+      # 3. إنشاء ملف firebase_options.dart من الأسرار (Secrets)
+      #    هذه الخطوة مهمة جداً لحماية مفاتيح الربط مع Firebase
+      #    التصحيح: نحدد المسار الصحيح داخل مجلد المشروع 'mkhzoni'
       - name: Create Firebase Options file
         env:
           FIREBASE_OPTIONS_CONTENT: ${{ secrets.FIREBASE_OPTIONS }}
-        run: echo "$FIREBASE_OPTIONS_CONTENT" > lib/firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS_CONTENT" > mkhzoni/lib/firebase_options.dart
 
+      # 4. تثبيت حزم واعتماديات المشروع
+      #    التصحيح: ندخل إلى مجلد المشروع أولاً ثم ننفذ الأمر
       - name: Install dependencies
-        # نحدد مجلد العمل الصحيح هنا
         run: cd mkhzoni && flutter pub get
 
+      # 5. بناء نسخة الويب من التطبيق
+      #    التصحيح: ندخل إلى مجلد المشروع ونحدد مسار النشر الصحيح
       - name: Build Flutter Web
-        # نحدد مجلد العمل ونعدل مسار البناء
         run: cd mkhzoni && flutter build web --release --base-href /mkhzoni/
+        # ملاحظة: /mkhzoni/ هو اسم المستودع. تأكد من أنه يطابق اسم مستودعك.
 
+      # 6. نشر المجلد المبني إلى فرع gh-pages لنشره على GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # نحدد المجلد الصحيح الذي تم البناء فيه
+          # التصحيح: نحدد المجلد الصحيح الذي يحتوي على النسخة المبنية
           publish_dir: ./mkhzoni/build/web
+
