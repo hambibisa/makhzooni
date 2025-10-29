@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../data/models/product_model.dart'; // استيراد نموذج المنتج
-import '../../data/models/sale_item_model.dart'; // استيراد نموذج بند البيع
+import 'package:cloud_firestore/cloud_firestore.dart'; // استيراد Firestore
+import '../../data/models/product_model.dart';
+import '../../data/models/sale_item_model.dart';
 
-// شاشة نقطة البيع الرئيسية
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
 
@@ -11,32 +11,33 @@ class SalesScreen extends StatefulWidget {
 }
 
 class _SalesScreenState extends State<SalesScreen> {
-  // قائمة المنتجات (مؤقتة - لاحقاً سنقرأها من Firebase)
-  final List<Product> _availableProducts = [
-    Product(id: 'p1', name: 'تونة الخير', price: 500, quantity: 20),
-    Product(id: 'p2', name: 'زيت طبخ', price: 1200, quantity: 15),
-    Product(id: 'p3', name: 'سكر 1 كيلو', price: 800, quantity: 30),
-  ];
-
-  // سلة المشتريات
+  // سلة المشتريات (تبقى كما هي)
   final List<SaleItem> _cart = [];
+  
+  // --- تم حذف قائمة المنتجات المؤقتة ---
 
-  // دالة لإضافة منتج إلى السلة
   void _addToCart(Product product) {
+    // التأكد من أن الكمية المتاحة أكبر من صفر
+    if (product.quantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('الكمية نفدت للمنتج: ${product.name}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
-      // التحقق مما إذا كان المنتج موجوداً بالفعل في السلة
       final index = _cart.indexWhere((item) => item.productId == product.id);
       if (index != -1) {
-        // إذا كان موجوداً، قم بزيادة الكمية
-        final existingItem = _cart[index];
         _cart[index] = SaleItem(
-          productId: existingItem.productId,
-          productName: existingItem.productName,
-          quantity: existingItem.quantity + 1,
-          price: existingItem.price,
+          productId: _cart[index].productId,
+          productName: _cart[index].productName,
+          quantity: _cart[index].quantity + 1,
+          price: _cart[index].price,
         );
       } else {
-        // إذا لم يكن موجوداً، قم بإضافته
         _cart.add(SaleItem(
           productId: product.id!,
           productName: product.name,
@@ -47,9 +48,15 @@ class _SalesScreenState extends State<SalesScreen> {
     });
   }
 
-  // حساب إجمالي مبلغ السلة
   double get _cartTotal {
     return _cart.fold(0.0, (sum, item) => sum + item.totalPrice);
+  }
+  
+  // دالة لمسح السلة
+  void _clearCart() {
+    setState(() {
+      _cart.clear();
+    });
   }
 
   @override
@@ -58,44 +65,75 @@ class _SalesScreenState extends State<SalesScreen> {
       appBar: AppBar(
         title: const Text("نقطة البيع"),
         backgroundColor: Colors.green,
+        actions: [
+          // زر لمسح السلة
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            onPressed: _cart.isEmpty ? null : _clearCart,
+            tooltip: 'مسح السلة',
+          ),
+        ],
       ),
       body: Row(
         children: [
-          // --- الجزء الأيسر: قائمة المنتجات ---
+          // --- الجزء الأيسر: قائمة المنتجات من Firebase ---
           Expanded(
             flex: 2,
             child: Container(
               color: Colors.grey[100],
-              child: ListView.builder(
-                itemCount: _availableProducts.length,
-                itemBuilder: (ctx, index) {
-                  final product = _availableProducts[index];
-                  return Card(
-                    margin: const EdgeInsets.all(4),
-                    child: ListTile(
-                      title: Text(product.name),
-                      subtitle: Text('${product.price.toStringAsFixed(0)} ر.ي'),
-                      trailing: const Icon(Icons.add_shopping_cart, color: Colors.green),
-                      onTap: () => _addToCart(product),
-                    ),
+              child: StreamBuilder<QuerySnapshot>(
+                // الاستماع إلى مجموعة 'products'
+                stream: FirebaseFirestore.instance.collection('products').orderBy('name').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('لا توجد منتجات في المخزون'));
+                  }
+
+                  final productsDocs = snapshot.data!.docs;
+
+                  return ListView.builder(
+                    itemCount: productsDocs.length,
+                    itemBuilder: (ctx, index) {
+                      final product = Product.fromMap(
+                        productsDocs[index].data() as Map<String, dynamic>,
+                        productsDocs[index].id,
+                      );
+                      
+                      // جعل العنصر غير قابل للاستخدام إذا كانت الكمية صفر
+                      final bool isOutOfStock = product.quantity <= 0;
+
+                      return Card(
+                        margin: const EdgeInsets.all(4),
+                        color: isOutOfStock ? Colors.grey[300] : null,
+                        child: ListTile(
+                          title: Text(product.name),
+                          subtitle: Text('المتاح: ${product.quantity} | السعر: ${product.price.toStringAsFixed(0)} ر.ي'),
+                          trailing: isOutOfStock 
+                            ? const Text('نفد', style: TextStyle(color: Colors.red))
+                            : const Icon(Icons.add_shopping_cart, color: Colors.green),
+                          onTap: isOutOfStock ? null : () => _addToCart(product),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
             ),
           ),
 
-          // --- الجزء الأيمن: سلة المشتريات ---
+          // --- الجزء الأيمن: سلة المشتريات (تبقى كما هي) ---
           Expanded(
             flex: 3,
             child: Column(
               children: [
-                // رأس القائمة
                 const ListTile(
                   leading: Icon(Icons.shopping_cart),
                   title: Text('سلة المشتريات', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 const Divider(),
-                // قائمة المنتجات في السلة
                 Expanded(
                   child: _cart.isEmpty
                       ? const Center(child: Text('السلة فارغة'))
@@ -110,13 +148,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                 '${item.totalPrice.toStringAsFixed(0)} ر.ي',
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              // لاحقاً: يمكن إضافة أزرار لزيادة/إنقاص الكمية أو الحذف
                             );
                           },
                         ),
                 ),
                 const Divider(),
-                // الإجمالي وزر إتمام البيع
                 Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: Column(
@@ -136,7 +172,7 @@ class _SalesScreenState extends State<SalesScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _cart.isEmpty ? null : () {
-                            // لاحقاً: فتح شاشة إتمام البيع (نقدي أم آجل)
+                            // لاحقاً: فتح شاشة إتمام البيع
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
