@@ -48,4 +48,4 @@ jobs:
         with:
           name: makhzoni-app-release.apk
           # المسار أصبح بسيطاً أيضاً
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/release/app-release.apk
