@@ -1,43 +1,116 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../data/models/product_model.dart'; // لاستخدام قالب المنتج
-import 'add_product_screen.dart'; // لفتح شاشة الإضافة
-
-class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key});
-
-    @override
-      State<ProductsScreen> createState() => _ProductsScreenState();
-      }
-
-      class _ProductsScreenState extends State<ProductsScreen> {
-        // 1. إنشاء Stream لجلب البيانات الحية من Firestore
-          final Stream<QuerySnapshot> _productsStream = 
-                FirebaseFirestore.instance.collection('products').snapshots();
-
-                  @override
-                    Widget build(BuildContext context) {
-                        return Scaffold(
-                              appBar: AppBar(
-                                      title: const Text("المنتجات"),
-                                              backgroundColor: Colors.green,
-                                                    ),
-                                                          // 2. استخدام StreamBuilder لعرض البيانات
-                                                                body: StreamBuilder<QuerySnapshot>(
-                                                                        stream: _productsStream,
-                                                                                builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                                                                                          // 3. حالة وجود خطأ
-                                                                                                    if (snapshot.hasError) {
-                                                                                                                return const Center(child: Text('حدث خطأ ما'));
-                                                                                                                          }
-
-                                                                                                                                    // 4. حالة انتظار البيانات
-                                                                                                                                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                                                                                                                                          return const Center(child: CircularProgressIndicator());
                                                                                                                                                                     }
 
                                                                                                                                                                               // 5. حالة عدم وجود منتجات
-                                                                                                                                                                                        if (snapshot.data!.docs.isEmpty) {
+   import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../data/models/product_model.dart';
+import 'add_product_screen.dart';
+
+// 1. تحويل الشاشة إلى StatefulWidget
+class ProductsScreen extends StatefulWidget {
+  const ProductsScreen({super.key});
+
+  @override
+  State<ProductsScreen> createState() => _ProductsScreenState();
+}
+
+class _ProductsScreenState extends State<ProductsScreen> {
+  // 2. متغير لتخزين نص البحث
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("المنتجات"),
+        backgroundColor: Colors.green,
+      ),
+      body: Column(
+        children: [
+          // 3. إضافة حقل البحث
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+              decoration: const InputDecoration(
+                labelText: 'ابحث عن منتج...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                ),
+              ),
+            ),
+          ),
+          // 4. استخدام StreamBuilder لعرض البيانات المفلترة
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('products').orderBy('name').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('لا توجد منتجات مضافة'));
+                }
+
+                // --- منطق الفلترة ---
+                final allProducts = snapshot.data!.docs;
+                final filteredProducts = _searchQuery.isEmpty
+                    ? allProducts // إذا كان البحث فارغاً، اعرض كل المنتجات
+                    : allProducts.where((doc) {
+                        final productName = (doc.data() as Map<String, dynamic>)['name']?.toString().toLowerCase() ?? '';
+                        return productName.contains(_searchQuery); // اعرض فقط ما يطابق البحث
+                      }).toList();
+                
+                if (filteredProducts.isEmpty) {
+                  return const Center(child: Text('لا توجد نتائج مطابقة للبحث'));
+                }
+
+                return ListView.builder(
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (ctx, index) {
+                    final doc = filteredProducts[index];
+                    final product = Product.fromMap(
+                      doc.data() as Map<String, dynamic>,
+                      doc.id,
+                    );
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: Text(product.quantity.toString()),
+                        ),
+                        title: Text(product.name),
+                        subtitle: Text('السعر: ${product.price.toStringAsFixed(0)} ر.ي'),
+                        trailing: const Icon(Icons.edit),
+                        onTap: () {
+                          // لاحقاً: يمكن فتح شاشة تعديل المنتج هنا
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (ctx) => const AddProductScreen()),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+                                                                                                                                                                                     if (snapshot.data!.docs.isEmpty) {
                                                                                                                                                                                                     return const Center(
                                                                                                                                                                                                                   child: Text(
                                                                                                                                                                                                                                   'لا توجد منتجات حتى الآن.\nاضغط على زر + لإضافة أول منتج.',
