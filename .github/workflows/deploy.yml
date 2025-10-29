@@ -1,51 +1,49 @@
-name: Deploy Flutter Web to GitHub Pages
+name: Build Flutter Android APK
 
-# يعمل هذا الـ Workflow عند كل عملية push إلى الفرع الرئيسي
 on:
   push:
     branches:
       - main
 
 jobs:
-  build_and_deploy:
-    # يعمل على آخر نسخة من نظام أوبونتو
+  build_apk:
     runs-on: ubuntu-latest
-
+    
     steps:
-      # 1. جلب الكود من المستودع إلى بيئة العمل
+      # 1. جلب الكود من المستودع
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. تثبيت Flutter SDK
+      # 2. تثبيت Java Development Kit (JDK) وهو ضروري لبناء تطبيقات أندرويد
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17' # فلاتر يتطلب نسخة حديثة من جافا
+
+      # 3. تثبيت Flutter SDK
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable' # استخدم النسخة المستقرة من فلاتر
+          channel: 'stable'
 
-      # 3. إنشاء ملف firebase_options.dart من الأسرار (Secrets)
-      #    هذه الخطوة مهمة جداً لحماية مفاتيح الربط مع Firebase
-      #    التصحيح: نحدد المسار الصحيح داخل مجلد المشروع 'mkhzoni'
+      # 4. إنشاء ملف firebase_options.dart من الأسرار (Secrets)
       - name: Create Firebase Options file
         env:
           FIREBASE_OPTIONS_CONTENT: ${{ secrets.FIREBASE_OPTIONS }}
         run: echo "$FIREBASE_OPTIONS_CONTENT" > mkhzoni/lib/firebase_options.dart
 
-      # 4. تثبيت حزم واعتماديات المشروع
-      #    التصحيح: ندخل إلى مجلد المشروع أولاً ثم ننفذ الأمر
+      # 5. تثبيت حزم واعتماديات المشروع
       - name: Install dependencies
         run: cd mkhzoni && flutter pub get
 
-      # 5. بناء نسخة الويب من التطبيق
-      #    التصحيح: ندخل إلى مجلد المشروع ونحدد مسار النشر الصحيح
-      - name: Build Flutter Web
-        run: cd mkhzoni && flutter build web --release --base-href /mkhzoni/
-        # ملاحظة: /mkhzoni/ هو اسم المستودع. تأكد من أنه يطابق اسم مستودعك.
+      # 6. بناء ملف الـ APK
+      - name: Build APK
+        run: cd mkhzoni && flutter build apk --release
 
-      # 6. نشر المجلد المبني إلى فرع gh-pages لنشره على GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # 7. رفع ملف الـ APK الناتج كـ "Artifact"
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # التصحيح: نحدد المجلد الصحيح الذي يحتوي على النسخة المبنية
-          publish_dir: ./mkhzoni/build/web
-
+          name: makhzoni-app-release.apk
+          path: mkhzoni/build/app/outputs/flutter-apk/app-release.apk
