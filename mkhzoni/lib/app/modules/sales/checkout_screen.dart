@@ -19,35 +19,82 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  SaleType _saleType = SaleType.cash; // النوع الافتراضي هو نقدي
-  Client? _selectedClient; // العميل المختار في حالة البيع الآجل
+  SaleType _saleType = SaleType.cash;
+  Client? _selectedClient;
   bool _isLoading = false;
 
-  // --- هنا سنضيف دالة حفظ الفاتورة لاحقاً ---
+  // --- دالة حفظ الفاتورة النهائية ---
   Future<void> _confirmSale() async {
-    // منطق الحفظ سيأتي في الخطوة التالية
-    print('نوع البيع: $_saleType');
-    if (_saleType == SaleType.credit && _selectedClient != null) {
-      print('العميل: ${_selectedClient!.name}');
-    }
-    print('المبلغ الإجمالي: ${widget.totalAmount}');
-    
-    // محاكاة للشبكة
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
-
-    if (mounted) {
-       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ الفاتورة بنجاح (مؤقتاً)')),
+    // التحقق من اختيار العميل في حالة البيع الآجل
+    if (_saleType == SaleType.credit && _selectedClient == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الرجاء اختيار عميل لإتمام البيع الآجل'), backgroundColor: Colors.red),
       );
-      // العودة مرتين: إغلاق شاشة الدفع ثم شاشة نقطة البيع
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. إنشاء كائن الفاتورة
+      final newSale = Sale(
+        items: widget.cart,
+        totalAmount: widget.totalAmount,
+        saleType: _saleType,
+        clientId: _selectedClient?.id,
+        clientName: _selectedClient?.name,
+        createdAt: DateTime.now(),
+      );
+
+      // 2. استخدام WriteBatch لضمان تنفيذ جميع العمليات معاً
+      final batch = FirebaseFirestore.instance.batch();
+      final firestore = FirebaseFirestore.instance;
+
+      // 3. إضافة الفاتورة الجديدة إلى مجموعة 'sales'
+      final saleRef = firestore.collection('sales').doc();
+      batch.set(saleRef, newSale.toMap());
+
+      // 4. تحديث كميات المنتجات في المخزون
+      for (final item in widget.cart) {
+        final productRef = firestore.collection('products').doc(item.productId);
+        // إنقاص الكمية المباعة من الكمية الحالية في المخزون
+        batch.update(productRef, {'quantity': FieldValue.increment(-item.quantity)});
+      }
+
+      // 5. تحديث إجمالي دين العميل (فقط في حالة البيع الآجل)
+      if (_saleType == SaleType.credit && _selectedClient != null) {
+        final clientRef = firestore.collection('clients').doc(_selectedClient!.id);
+        // زيادة إجمالي الدين على العميل بقيمة الفاتورة
+        batch.update(clientRef, {'totalDebt': FieldValue.increment(widget.totalAmount)});
+      }
+
+      // 6. تنفيذ جميع العمليات دفعة واحدة
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تمت عملية البيع بنجاح!'), backgroundColor: Colors.green),
+        );
+        // العودة إلى الشاشة الرئيسية للتطبيق
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ فادح: $error'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // ... (بقية الواجهة تبقى كما هي بدون تغيير)
     return Scaffold(
       appBar: AppBar(
         title: const Text('إتمام البيع'),
@@ -60,7 +107,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // عرض المبلغ الإجمالي
             Card(
               color: Colors.green[50],
               child: ListTile(
@@ -72,8 +118,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // اختيار نوع البيع (نقدي أو آجل)
             const Text('اختر نوع البيع:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             RadioListTile<SaleType>(
               title: const Text('بيع نقدي (كاش)'),
@@ -88,8 +132,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               onChanged: (value) => setState(() => _saleType = value!),
             ),
             const Divider(),
-
-            // عرض قائمة العملاء في حالة البيع الآجل
             if (_saleType == SaleType.credit)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +139,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   const SizedBox(height: 16),
                   const Text('اختر العميل:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  // قائمة منسدلة لعرض العملاء من Firebase
                   StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance.collection('clients').orderBy('name').snapshots(),
                     builder: (context, snapshot) {
@@ -128,22 +169,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ],
               ),
-            
             const SizedBox(height: 40),
-
-            // زر تأكيد البيع
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  if (_saleType == SaleType.credit && _selectedClient == null) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('الرجاء اختيار عميل لإتمام البيع الآجل'), backgroundColor: Colors.red),
-                    );
-                    return;
-                  }
-                  _confirmSale();
-                },
+                onPressed: _confirmSale, // استدعاء الدالة النهائية هنا
                 icon: const Icon(Icons.check_circle),
                 label: const Text('تأكيد وحفظ الفاتورة'),
                 style: ElevatedButton.styleFrom(
