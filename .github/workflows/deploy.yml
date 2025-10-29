@@ -8,12 +8,7 @@ on:
 jobs:
   build_apk:
     runs-on: ubuntu-latest
-        
-    # هذا هو التعديل الجوهري: نجعل كل الأوامر تعمل من داخل مجلد المشروع
-    defaults:
-      run:
-        working-directory: ./mkhzoni
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -29,23 +24,23 @@ jobs:
         with:
           channel: 'stable'
 
-      # الآن، كل الأوامر التالية ستعمل تلقائياً داخل مجلد 'mkhzoni'
-          
+      # نكتب المسار الكامل والصريح هنا
       - name: Create Firebase Options file
         env:
           FIREBASE_OPTIONS_CONTENT: ${{ secrets.FIREBASE_OPTIONS }}
-        # المسار أصبح بسيطاً لأننا نعمل من داخل 'mkhzoni'
-        run: echo "$FIREBASE_OPTIONS_CONTENT" > lib/firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS_CONTENT" > mkhzoni/lib/firebase_options.dart
 
+      # ندخل إلى المجلد ثم ننفذ الأمر
       - name: Install dependencies
-        run: flutter pub get
+        run: cd mkhzoni && flutter pub get
 
+      # ندخل إلى المجلد ثم ننفذ الأمر
       - name: Build APK
-        run: flutter build apk --release
+        run: cd mkhzoni && flutter build apk --release
 
+      # نستخدم المسار الكامل والصريح هنا
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: makhzoni-app-release.apk
-          # المسار أصبح بسيطاً أيضاً
-          path: build/app/outputs/release/app-release.apk
+          path: mkhzoni/build/app/outputs/apk/release/app-release.apk
