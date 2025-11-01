@@ -7,7 +7,7 @@ import 'app/modules/clients/clients_screen.dart';
 import 'app/modules/reports/reports_screen.dart';
 import 'app/modules/settings/settings_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:mkhzoni/firebase_options.dart';
 
 
 // هذا هو الكود الجديد
