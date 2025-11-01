@@ -16,9 +16,8 @@ jobs:
           channel: 'stable'
 
       - name: Create firebase_options.dart from secret
-        run: |
-          echo "${{ secrets.FIREBASE_OPTIONS_CONTENT }}" > mkhzoni/lib/firebase_options.dart
-            
+        run: echo "${{ secrets.FIREBASE_OPTIONS_CONTENT }}" > mkhzoni/lib/firebase_options.dart
+
       - name: Build APK
         working-directory: ./mkhzoni # <-- يضمن تنفيذ الأوامر في المجلد الصحيح
         run: |
