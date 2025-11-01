@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/models/product_model.dart';
-import '../../data/models/sale_item_model.dart';
+import 'package:mkhzoni/data/models/product_model.dart';
+import 'package:mkhzoni/data/models/sale_item_model.dart';
 import 'checkout_screen.dart'; // 1. استيراد شاشة إتمام البيع
 
 class SalesScreen extends StatefulWidget {
@@ -48,7 +48,7 @@ class _SalesScreenState extends State<SalesScreen> {
   double get _cartTotal {
     return _cart.fold(0.0, (sum, item) => sum + item.totalPrice);
   }
-  
+
   void _clearCart() {
     setState(() {
       _cart.clear();
@@ -58,15 +58,17 @@ class _SalesScreenState extends State<SalesScreen> {
   // 2. دالة لفتح شاشة إتمام البيع
   void _navigateToCheckout() {
     if (_cart.isEmpty) return;
-    
-    Navigator.of(context).push(
+
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (ctx) => CheckoutScreen(
           cart: _cart,
           totalAmount: _cartTotal,
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       // بعد العودة من شاشة الدفع، قم بمسح السلة
       _clearCart();
     });
@@ -94,7 +96,10 @@ class _SalesScreenState extends State<SalesScreen> {
             child: Container(
               color: Colors.grey[100],
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('products').orderBy('name').snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('products')
+                    .orderBy('name')
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -112,7 +117,7 @@ class _SalesScreenState extends State<SalesScreen> {
                         productsDocs[index].data() as Map<String, dynamic>,
                         productsDocs[index].id,
                       );
-                      
+
                       final bool isOutOfStock = product.quantity <= 0;
 
                       return Card(
@@ -120,11 +125,15 @@ class _SalesScreenState extends State<SalesScreen> {
                         color: isOutOfStock ? Colors.grey[300] : null,
                         child: ListTile(
                           title: Text(product.name),
-                          subtitle: Text('المتاح: ${product.quantity} | السعر: ${product.price.toStringAsFixed(0)} ر.ي'),
-                          trailing: isOutOfStock 
-                            ? const Text('نفد', style: TextStyle(color: Colors.red))
-                            : const Icon(Icons.add_shopping_cart, color: Colors.green),
-                          onTap: isOutOfStock ? null : () => _addToCart(product),
+                          subtitle: Text(
+                              'المتاح: ${product.quantity} | السعر: ${product.price.toStringAsFixed(0)} ر.ي'),
+                          trailing: isOutOfStock
+                              ? const Text('نفد',
+                                  style: TextStyle(color: Colors.red))
+                              : const Icon(Icons.add_shopping_cart,
+                                  color: Colors.green),
+                          onTap:
+                              isOutOfStock ? null : () => _addToCart(product),
                         ),
                       );
                     },
@@ -141,7 +150,8 @@ class _SalesScreenState extends State<SalesScreen> {
               children: [
                 const ListTile(
                   leading: Icon(Icons.shopping_cart),
-                  title: Text('سلة المشتريات', style: TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text('سلة المشتريات',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 const Divider(),
                 Expanded(
@@ -156,7 +166,8 @@ class _SalesScreenState extends State<SalesScreen> {
                               subtitle: Text('الكمية: ${item.quantity}'),
                               trailing: Text(
                                 '${item.totalPrice.toStringAsFixed(0)} ر.ي',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
                             );
                           },
@@ -170,10 +181,15 @@ class _SalesScreenState extends State<SalesScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('الإجمالي:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Text('الإجمالي:',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
                           Text(
                             '${_cartTotal.toStringAsFixed(0)} ر.ي',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green),
                           ),
                         ],
                       ),
@@ -187,7 +203,9 @@ class _SalesScreenState extends State<SalesScreen> {
                             backgroundColor: Colors.green,
                             padding: const EdgeInsets.symmetric(vertical: 15),
                           ),
-                          child: const Text('إتمام البيع', style: TextStyle(fontSize: 18, fontFamily: 'Cairo')),
+                          child: const Text('إتمام البيع',
+                              style:
+                                  TextStyle(fontSize: 18, fontFamily: 'Cairo')),
                         ),
                       ),
                     ],

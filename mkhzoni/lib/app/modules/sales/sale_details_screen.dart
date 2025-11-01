@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../data/models/sale_model.dart';
+import 'package:mkhzoni/data/models/sale_model.dart';
 
 class SaleDetailsScreen extends StatelessWidget {
   final Sale sale;
@@ -9,7 +9,8 @@ class SaleDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String formattedDate = DateFormat('yyyy/MM/dd – hh:mm a').format(sale.createdAt);
+    final String formattedDate =
+        DateFormat('yyyy/MM/dd – hh:mm a').format(sale.createdAt);
 
     return Scaffold(
       appBar: AppBar(
@@ -29,30 +30,34 @@ class SaleDetailsScreen extends StatelessWidget {
                 children: [
                   _buildDetailRow('رقم الفاتورة:', '#${sale.id!}'),
                   _buildDetailRow('التاريخ:', formattedDate),
-                  _buildDetailRow('نوع البيع:', sale.saleType == SaleType.cash ? 'نقدي' : 'آجل (دين)'),
+                  _buildDetailRow('نوع البيع:',
+                      sale.saleType == SaleType.cash ? 'نقدي' : 'آجل (دين)'),
                   if (sale.saleType == SaleType.credit)
                     _buildDetailRow('العميل:', sale.clientName ?? 'غير محدد'),
                 ],
               ),
             ),
           ),
-          
+
           const SizedBox(height: 20),
 
           // --- قائمة المنتجات المباعة ---
-          const Text('المنتجات المباعة:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('المنتجات المباعة:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const Divider(),
           // استخدام ListView.builder لعرض قائمة المنتجات
           ListView.builder(
             shrinkWrap: true, // مهم جداً عند وضع ListView داخل ListView آخر
-            physics: const NeverScrollableScrollPhysics(), // لمنع التمرير المتعارض
+            physics:
+                const NeverScrollableScrollPhysics(), // لمنع التمرير المتعارض
             itemCount: sale.items.length,
             itemBuilder: (ctx, index) {
               final item = sale.items[index];
               return ListTile(
                 leading: CircleAvatar(child: Text('${index + 1}')),
                 title: Text(item.productName),
-                subtitle: Text('الكمية: ${item.quantity} × السعر: ${item.price.toStringAsFixed(0)}'),
+                subtitle: Text(
+                    'الكمية: ${item.quantity} × السعر: ${item.price.toStringAsFixed(0)}'),
                 trailing: Text(
                   '${item.totalPrice.toStringAsFixed(0)} ر.ي',
                   style: const TextStyle(fontWeight: FontWeight.bold),

@@ -7,67 +7,62 @@ import 'app/modules/clients/clients_screen.dart';
 import 'app/modules/reports/reports_screen.dart';
 import 'app/modules/settings/settings_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:mkhzoni/firebase_options.dart';
-
 
 // هذا هو الكود الجديد
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-    
-      await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-            );
 
-              runApp(const MakhzoniApp());
-              }
-              
+  await Firebase.initializeApp();
 
-  class MakhzoniApp extends StatelessWidget {
-    const MakhzoniApp({super.key});
+  runApp(const MakhzoniApp());
+}
 
-      @override
-        Widget build(BuildContext context) {
-            return MaterialApp(
-                  title: 'مخزوني',
-                        debugShowCheckedModeBanner: false,
-                              theme: ThemeData(
-                                      primarySwatch: Colors.green,
-                                               fontFamily: 'Cairo', // يمكنك تفعيل لو أضفت الخط في assets لاحقًا
-                                                      scaffoldBackgroundColor: Colors.white,
-                                                            ),
-                                                                  home: const MainScreen(),
-                                                                        // يمكنك إضافة routes هنا لاحقًا
-                                                                            );
-                                                                              }
-                                                                              }
+class MakhzoniApp extends StatelessWidget {
+  const MakhzoniApp({super.key});
 
-                                                                              class MainScreen extends StatefulWidget {
-                                                                                const MainScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'مخزوني',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+        fontFamily: 'Cairo', // يمكنك تفعيل لو أضفت الخط في assets لاحقًا
+        scaffoldBackgroundColor: Colors.white,
+      ),
+      home: const MainScreen(),
+      // يمكنك إضافة routes هنا لاحقًا
+    );
+  }
+}
 
-                                                                                  @override
-                                                                                    State<MainScreen> createState() => _MainScreenState();
-                                                                                    }
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
-                                                                                    class _MainScreenState extends State<MainScreen> {
-                                                                                      int _currentIndex = 0;
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
 
-                                                                                        final List<Widget> _pages = const [
-                                                                                            HomeScreen(),
-                                                                                                ProductsScreen(),
-                                                                                                    SalesScreen(),
-                                                                                                        ClientsScreen(),
-                                                                                                            ReportsScreen(),
-                                                                                                                SettingsScreen(),
-                                                                                                                  ];
+class _MainScreenState extends State<MainScreen> {
+  int _currentIndex = 0;
 
-                                                                                                                    @override
-                                                                                                                      Widget build(BuildContext context) {
-                                                                                                                          return Scaffold(
-                                                                                                                                body: _pages[_currentIndex],
-                                                                                                                                      bottomNavigationBar: CustomBottomNav(
-                                                                                                                                              currentIndex: _currentIndex,
-                                                                                                                                                      onTap: (index) => setState(() => _currentIndex = index),
-                                                                                                                                                            ),
-                                                                                                                                                                );
-                                                                                                                                                                  }
-                                                                                                                                                                  }
+  final List<Widget> _pages = const [
+    HomeScreen(),
+    ProductsScreen(),
+    SalesScreen(),
+    ClientsScreen(),
+    ReportsScreen(),
+    SettingsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_currentIndex],
+      bottomNavigationBar: CustomBottomNav(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+      ),
+    );
+  }
+}

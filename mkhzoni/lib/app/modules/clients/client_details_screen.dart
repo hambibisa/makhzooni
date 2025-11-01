@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/models/client_model.dart';
+import 'package:mkhzoni/data/models/client_model.dart';
 import 'edit_client_screen.dart'; // <-- استيراد شاشة التعديل
 
 class ClientDetailsScreen extends StatelessWidget {
@@ -35,7 +35,9 @@ class ClientDetailsScreen extends StatelessWidget {
                   return 'الرجاء إدخال مبلغ صحيح';
                 }
                 // نستخدم البيانات الحية للدين للتحقق
-                final currentDebt = (context.read<DocumentSnapshot>().data() as Map<String, dynamic>)['totalDebt'] ?? 0.0;
+                final currentDebt = (context.read<DocumentSnapshot>().data()
+                        as Map<String, dynamic>)['totalDebt'] ??
+                    0.0;
                 if (amount > currentDebt) {
                   return 'المبلغ أكبر من الدين الحالي!';
                 }
@@ -52,12 +54,13 @@ class ClientDetailsScreen extends StatelessWidget {
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
                   final amountPaid = double.parse(amountController.text);
-                  
+
                   try {
-                    final clientRef = FirebaseFirestore.instance.collection('clients').doc(client.id);
-                    await clientRef.update({
-                      'totalDebt': FieldValue.increment(-amountPaid)
-                    });
+                    final clientRef = FirebaseFirestore.instance
+                        .collection('clients')
+                        .doc(client.id);
+                    await clientRef.update(
+                        {'totalDebt': FieldValue.increment(-amountPaid)});
 
                     Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -67,7 +70,7 @@ class ClientDetailsScreen extends StatelessWidget {
                       ),
                     );
                   } catch (e) {
-                     ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('حدث خطأ: $e'),
                         backgroundColor: Colors.red,
@@ -84,17 +87,21 @@ class ClientDetailsScreen extends StatelessWidget {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('clients').doc(client.id).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('clients')
+          .doc(client.id)
+          .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
         }
 
-        final liveClient = Client.fromMap(snapshot.data!.data() as Map<String, dynamic>, snapshot.data!.id);
+        final liveClient = Client.fromMap(
+            snapshot.data!.data() as Map<String, dynamic>, snapshot.data!.id);
 
         return Scaffold(
           appBar: AppBar(
@@ -123,7 +130,8 @@ class ClientDetailsScreen extends StatelessWidget {
               children: [
                 Card(
                   elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -139,7 +147,8 @@ class ClientDetailsScreen extends StatelessWidget {
                 Card(
                   elevation: 4,
                   color: Colors.red[50],
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
@@ -173,7 +182,8 @@ class ClientDetailsScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       padding: const EdgeInsets.symmetric(vertical: 15),
-                      textStyle: const TextStyle(fontSize: 18, fontFamily: 'Cairo'),
+                      textStyle:
+                          const TextStyle(fontSize: 18, fontFamily: 'Cairo'),
                     ),
                   ),
                 ),

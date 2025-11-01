@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/models/product_model.dart';
+import 'package:mkhzoni/data/models/product_model.dart';
 
 class EditProductScreen extends StatefulWidget {
   final Product product;
@@ -25,15 +25,17 @@ class _EditProductScreenState extends State<EditProductScreen> {
     super.initState();
     // تعبئة الحقول بالبيانات الحالية للمنتج
     _nameController = TextEditingController(text: widget.product.name);
-    _priceController = TextEditingController(text: widget.product.price.toString());
-    _quantityController = TextEditingController(text: widget.product.quantity.toString());
+    _priceController =
+        TextEditingController(text: widget.product.price.toString());
+    _quantityController =
+        TextEditingController(text: widget.product.quantity.toString());
     _barcodeController = TextEditingController(text: widget.product.barcode);
   }
 
   Future<void> _updateProduct() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
+
       final updatedProduct = Product(
         id: widget.product.id,
         name: _nameController.text,
@@ -47,7 +49,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
             .collection('products')
             .doc(widget.product.id)
             .update(updatedProduct.toMap());
-            
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('تم تحديث المنتج بنجاح!')),
@@ -88,27 +90,33 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   children: [
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'اسم المنتج'),
-                      validator: (value) => value!.isEmpty ? 'الرجاء إدخال اسم المنتج' : null,
+                      decoration:
+                          const InputDecoration(labelText: 'اسم المنتج'),
+                      validator: (value) =>
+                          value!.isEmpty ? 'الرجاء إدخال اسم المنتج' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _priceController,
                       decoration: const InputDecoration(labelText: 'سعر البيع'),
                       keyboardType: TextInputType.number,
-                      validator: (value) => value!.isEmpty ? 'الرجاء إدخال السعر' : null,
+                      validator: (value) =>
+                          value!.isEmpty ? 'الرجاء إدخال السعر' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _quantityController,
-                      decoration: const InputDecoration(labelText: 'الكمية المتاحة'),
+                      decoration:
+                          const InputDecoration(labelText: 'الكمية المتاحة'),
                       keyboardType: TextInputType.number,
-                      validator: (value) => value!.isEmpty ? 'الرجاء إدخال الكمية' : null,
+                      validator: (value) =>
+                          value!.isEmpty ? 'الرجاء إدخال الكمية' : null,
                     ),
-                     const SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _barcodeController,
-                      decoration: const InputDecoration(labelText: 'رقم الباركود (اختياري)'),
+                      decoration: const InputDecoration(
+                          labelText: 'رقم الباركود (اختياري)'),
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 32),

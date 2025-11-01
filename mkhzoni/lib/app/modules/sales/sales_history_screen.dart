@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../../data/models/sale_model.dart';
+import 'package:mkhzoni/data/models/sale_model.dart';
 import 'sale_details_screen.dart'; // 1. استيراد شاشة تفاصيل الفاتورة
 
 class SalesHistoryScreen extends StatelessWidget {
@@ -48,11 +48,11 @@ class SalesHistoryScreen extends StatelessWidget {
               final IconData iconData = sale.saleType == SaleType.cash
                   ? Icons.money_rounded
                   : Icons.person_rounded;
-              final Color iconColor = sale.saleType == SaleType.cash
-                  ? Colors.blue
-                  : Colors.orange;
-              
-              final String formattedDate = DateFormat('yyyy/MM/dd – hh:mm a').format(sale.createdAt);
+              final Color iconColor =
+                  sale.saleType == SaleType.cash ? Colors.blue : Colors.orange;
+
+              final String formattedDate =
+                  DateFormat('yyyy/MM/dd – hh:mm a').format(sale.createdAt);
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),

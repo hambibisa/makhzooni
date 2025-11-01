@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/models/client_model.dart'; // استيراد نموذج العميل
+import 'package:mkhzoni/data/models/client_model.dart'; // استيراد نموذج العميل
 
 class AddClientScreen extends StatefulWidget {
   const AddClientScreen({super.key});
@@ -38,7 +38,8 @@ class _AddClientScreenState extends State<AddClientScreen> {
       final newClient = Client(
         name: _nameController.text,
         phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
-        address: _addressController.text.isNotEmpty ? _addressController.text : null,
+        address:
+            _addressController.text.isNotEmpty ? _addressController.text : null,
         // الدين المبدئي هو صفر
       );
 
@@ -129,7 +130,8 @@ class _AddClientScreenState extends State<AddClientScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 18, fontFamily: 'Cairo'),
+                        textStyle:
+                            const TextStyle(fontSize: 18, fontFamily: 'Cairo'),
                       ),
                     ),
                   ],

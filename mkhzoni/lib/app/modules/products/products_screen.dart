@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/models/product_model.dart';
+import 'package:mkhzoni/data/models/product_model.dart';
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart'; // <-- استيراد شاشة التعديل
 

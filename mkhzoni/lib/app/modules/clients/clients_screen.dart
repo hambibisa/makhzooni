@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/models/client_model.dart';
+import 'package:mkhzoni/data/models/client_model.dart';
 import 'add_client_screen.dart';
 import 'client_details_screen.dart'; // 1. استيراد شاشة التفاصيل
 
@@ -42,7 +42,10 @@ class _ClientsScreenState extends State<ClientsScreen> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('clients').orderBy('name').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('clients')
+                  .orderBy('name')
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -55,12 +58,17 @@ class _ClientsScreenState extends State<ClientsScreen> {
                 final filteredClients = _searchQuery.isEmpty
                     ? allClients
                     : allClients.where((doc) {
-                        final clientName = (doc.data() as Map<String, dynamic>)['name']?.toString().toLowerCase() ?? '';
+                        final clientName =
+                            (doc.data() as Map<String, dynamic>)['name']
+                                    ?.toString()
+                                    .toLowerCase() ??
+                                '';
                         return clientName.contains(_searchQuery);
                       }).toList();
-                
+
                 if (filteredClients.isEmpty) {
-                  return const Center(child: Text('لا توجد نتائج مطابقة للبحث'));
+                  return const Center(
+                      child: Text('لا توجد نتائج مطابقة للبحث'));
                 }
 
                 return ListView.builder(
@@ -72,7 +80,8 @@ class _ClientsScreenState extends State<ClientsScreen> {
                       doc.id,
                     );
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       child: ListTile(
                         leading: const CircleAvatar(child: Icon(Icons.person)),
                         title: Text(client.name),
@@ -80,7 +89,9 @@ class _ClientsScreenState extends State<ClientsScreen> {
                         trailing: Text(
                           'الدين: ${client.totalDebt.toStringAsFixed(0)} ر.ي',
                           style: TextStyle(
-                            color: client.totalDebt > 0 ? Colors.red : Colors.green,
+                            color: client.totalDebt > 0
+                                ? Colors.red
+                                : Colors.green,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -88,7 +99,8 @@ class _ClientsScreenState extends State<ClientsScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (ctx) => ClientDetailsScreen(client: client),
+                              builder: (ctx) =>
+                                  ClientDetailsScreen(client: client),
                             ),
                           );
                         },
